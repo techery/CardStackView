@@ -350,16 +350,15 @@ public class CardStackView extends FrameLayout {
 
         initializeCardStackPosition();
 
+        if (onCardSwipedListener != null) {
+            onCardSwipedListener.onCardSwiped(direction, state.topIndex);
+        }
+
         state.topIndex++;
 
         if (cardEventListener != null) {
             cardEventListener.onCardSwiped(direction);
         }
-
-        if (onCardSwipedListener != null) {
-            onCardSwipedListener.onCardSwiped(direction, state.topIndex);
-        }
-
 
         loadNextView();
 
@@ -506,6 +505,54 @@ public class CardStackView extends FrameLayout {
         overlayAnimationSet.playTogether(overlayAnimator);
 
         swipe(SwipeDirection.Top, cardAnimationSet, overlayAnimationSet);
+    }
+
+    public void swipeToLeft() {
+        CardContainerView target = getTopView();
+        View targetOverlay = target.getOverlayContainer();
+
+        ValueAnimator rotation = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("rotation", -10f));
+        rotation.setDuration(200);
+        ValueAnimator translateX = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("translationX", 0f, -getScreenWidth()));
+        ValueAnimator translateY = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("translationY", 0f, 500f));
+        translateX.setDuration(500);
+        translateY.setDuration(500);
+        AnimatorSet cardAnimationSet = new AnimatorSet();
+        cardAnimationSet.playTogether(rotation, translateX, translateY);
+
+        ObjectAnimator overlayAnimator = ObjectAnimator.ofFloat(targetOverlay, "alpha", 0f, 1f);
+        overlayAnimator.setDuration(200);
+        AnimatorSet overlayAnimationSet = new AnimatorSet();
+        overlayAnimationSet.playTogether(overlayAnimator);
+
+        swipe(SwipeDirection.Left, cardAnimationSet, overlayAnimationSet);
+    }
+
+    public void swipeToRight() {
+        CardContainerView target = getTopView();
+        View targetOverlay = target.getOverlayContainer();
+
+        ValueAnimator rotation = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("rotation", -10f));
+        rotation.setDuration(200);
+        ValueAnimator translateX = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("translationX", 0f, getScreenWidth()));
+        ValueAnimator translateY = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("translationY", 0f, 500f));
+        translateX.setDuration(500);
+        translateY.setDuration(500);
+        AnimatorSet cardAnimationSet = new AnimatorSet();
+        cardAnimationSet.playTogether(rotation, translateX, translateY);
+
+        ObjectAnimator overlayAnimator = ObjectAnimator.ofFloat(targetOverlay, "alpha", 0f, 1f);
+        overlayAnimator.setDuration(200);
+        AnimatorSet overlayAnimationSet = new AnimatorSet();
+        overlayAnimationSet.playTogether(overlayAnimator);
+
+        swipe(SwipeDirection.Right, cardAnimationSet, overlayAnimationSet);
     }
 
     public void swipeToBottom() {
