@@ -3,8 +3,12 @@ package com.yuyakaido.android.cardstackview;
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
+import android.animation.ObjectAnimator;
+import android.animation.PropertyValuesHolder;
 import android.animation.TimeInterpolator;
+import android.animation.ValueAnimator;
 import android.content.Context;
+import android.content.res.Resources;
 import android.content.res.TypedArray;
 import android.database.DataSetObserver;
 import android.graphics.Point;
@@ -484,6 +488,50 @@ public class CardStackView extends FrameLayout {
 
     public void setPaginationReserved() {
         state.isPaginationReserved = true;
+    }
+
+    public void swipeToTop() {
+        CardContainerView target = getTopView();
+        View targetOverlay = target.getOverlayContainer();
+
+        ValueAnimator translateY = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("translationY", 0f, -getScreenHeight()));
+        translateY.setDuration(500);
+        AnimatorSet cardAnimationSet = new AnimatorSet();
+        cardAnimationSet.playTogether(translateY);
+
+        ObjectAnimator overlayAnimator = ObjectAnimator.ofFloat(targetOverlay, "alpha", 0f, 1f);
+        overlayAnimator.setDuration(200);
+        AnimatorSet overlayAnimationSet = new AnimatorSet();
+        overlayAnimationSet.playTogether(overlayAnimator);
+
+        swipe(SwipeDirection.Top, cardAnimationSet, overlayAnimationSet);
+    }
+
+    public void swipeToBottom() {
+        CardContainerView target = getTopView();
+        View targetOverlay = target.getOverlayContainer();
+
+        ValueAnimator translateY = ObjectAnimator.ofPropertyValuesHolder(
+                target, PropertyValuesHolder.ofFloat("translationY", 0f, getScreenHeight()));
+        translateY.setDuration(500);
+        AnimatorSet cardAnimationSet = new AnimatorSet();
+        cardAnimationSet.playTogether(translateY);
+
+        ObjectAnimator overlayAnimator = ObjectAnimator.ofFloat(targetOverlay, "alpha", 0f, 1f);
+        overlayAnimator.setDuration(200);
+        AnimatorSet overlayAnimationSet = new AnimatorSet();
+        overlayAnimationSet.playTogether(overlayAnimator);
+
+        swipe(SwipeDirection.Bottom, cardAnimationSet, overlayAnimationSet);
+    }
+
+    public int getScreenWidth() {
+        return Resources.getSystem().getDisplayMetrics().widthPixels;
+    }
+
+    public int getScreenHeight() {
+        return Resources.getSystem().getDisplayMetrics().heightPixels;
     }
 
     public void swipe(final Point point, final SwipeDirection direction) {
