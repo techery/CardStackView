@@ -43,7 +43,7 @@ public class CardStackView extends FrameLayout {
     }
 
     public interface OnCardClickListener {
-        void onCardClick(int position)
+        void onCardClick(int position);
     }
 
     private CardStackOption option = new CardStackOption();
