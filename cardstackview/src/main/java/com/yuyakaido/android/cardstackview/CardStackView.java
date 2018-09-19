@@ -42,6 +42,10 @@ public class CardStackView extends FrameLayout {
         void onCardSwiped(SwipeDirection direction, int position);
     }
 
+    public interface OnCardClickListener {
+        void onCardClick(int position)
+    }
+
     private CardStackOption option = new CardStackOption();
     private CardStackState state = new CardStackState();
 
@@ -49,6 +53,7 @@ public class CardStackView extends FrameLayout {
     private LinkedList<CardContainerView> containers = new LinkedList<>();
     private CardEventListener cardEventListener = null;
     private OnCardSwipedListener onCardSwipedListener = null;
+    private OnCardClickListener onCardClickListener = null;
     private DataSetObserver dataSetObserver = new DataSetObserver() {
         @Override
         public void onChanged() {
@@ -83,6 +88,9 @@ public class CardStackView extends FrameLayout {
         public void onContainerClicked() {
             if (cardEventListener != null) {
                 cardEventListener.onCardClicked(state.topIndex);
+            }
+            if (onCardClickListener != null) {
+                onCardClickListener.onCardClick(state.topIndex);
             }
         }
     };
@@ -483,6 +491,10 @@ public class CardStackView extends FrameLayout {
         if (adapter != null) {
             initialize(false);
         }
+    }
+
+    public void setOnCardClickListener(OnCardClickListener onCardClickListener) {
+        this.onCardClickListener = onCardClickListener;
     }
 
     public void setPaginationReserved() {
