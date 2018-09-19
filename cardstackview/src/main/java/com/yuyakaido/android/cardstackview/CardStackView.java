@@ -34,12 +34,17 @@ public class CardStackView extends FrameLayout {
         void onCardClicked(int index);
     }
 
+    public interface OnCardSwipedListener {
+        void onCardSwiped(SwipeDirection direction, int position);
+    }
+
     private CardStackOption option = new CardStackOption();
     private CardStackState state = new CardStackState();
 
     private BaseAdapter adapter = null;
     private LinkedList<CardContainerView> containers = new LinkedList<>();
     private CardEventListener cardEventListener = null;
+    private OnCardSwipedListener onCardSwipedListener = null;
     private DataSetObserver dataSetObserver = new DataSetObserver() {
         @Override
         public void onChanged() {
@@ -347,6 +352,11 @@ public class CardStackView extends FrameLayout {
             cardEventListener.onCardSwiped(direction);
         }
 
+        if (onCardSwipedListener != null) {
+            onCardSwipedListener.onCardSwiped(direction, state.topIndex);
+        }
+
+
         loadNextView();
 
         containers.getLast().setContainerEventListener(null);
@@ -372,6 +382,10 @@ public class CardStackView extends FrameLayout {
 
     public void setCardEventListener(CardEventListener listener) {
         this.cardEventListener = listener;
+    }
+
+    public void setOnCardSwipeListener(OnCardSwipedListener listener) {
+        this.onCardSwipedListener = listener;
     }
 
     public void setAdapter(BaseAdapter adapter) {
