@@ -1,270 +1,298 @@
 package com.yuyakaido.android.cardstackview.sample;
 
-import android.animation.AnimatorSet;
-import android.animation.ObjectAnimator;
-import android.animation.PropertyValuesHolder;
-import android.animation.ValueAnimator;
 import android.os.Bundle;
-import android.os.Handler;
+import android.support.annotation.NonNull;
+import android.support.design.widget.NavigationView;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v7.app.ActionBarDrawerToggle;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.util.DiffUtil;
+import android.support.v7.widget.Toolbar;
 import android.util.Log;
-import android.view.Menu;
+import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.ProgressBar;
+import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 
+import com.yuyakaido.android.cardstackview.CardStackLayoutManager;
+import com.yuyakaido.android.cardstackview.CardStackListener;
 import com.yuyakaido.android.cardstackview.CardStackView;
-import com.yuyakaido.android.cardstackview.SwipeDirection;
+import com.yuyakaido.android.cardstackview.Direction;
+import com.yuyakaido.android.cardstackview.RewindAnimationSetting;
+import com.yuyakaido.android.cardstackview.StackFrom;
+import com.yuyakaido.android.cardstackview.SwipeAnimationSetting;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements CardStackListener {
 
-    private ProgressBar progressBar;
+    private DrawerLayout drawerLayout;
+
+    private CardStackLayoutManager manager;
+    private CardStackAdapter adapter;
     private CardStackView cardStackView;
-    private TouristSpotCardAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setup();
-        reload();
+        setupNavigation();
+        setupCardStackView();
+        setupButton();
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.activity_main, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.menu_activity_main_reload:
-                reload();
-                break;
-            case R.id.menu_activity_main_add_first:
-                addFirst();
-                break;
-            case R.id.menu_activity_main_add_last:
-                addLast();
-                break;
-            case R.id.menu_activity_main_remove_first:
-                removeFirst();
-                break;
-            case R.id.menu_activity_main_remove_last:
-                removeLast();
-                break;
-            case R.id.menu_activity_main_swipe_left:
-                swipeLeft();
-                break;
-            case R.id.menu_activity_main_swipe_right:
-                swipeRight();
-                break;
-            case R.id.menu_activity_main_reverse:
-                reverse();
-                break;
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(Gravity.START)) {
+            drawerLayout.closeDrawers();
+        } else {
+            super.onBackPressed();
         }
-        return super.onOptionsItemSelected(item);
     }
 
-    private TouristSpot createTouristSpot() {
-        return new TouristSpot("Yasaka Shrine", "Kyoto", "https://source.unsplash.com/Xq1ntWruZQI/600x800");
+    @Override
+    public void onCardDragging(Direction direction, float ratio) {
+        Log.d("CardStackView", "onCardDragging: d = " + direction.name() + ", r = " + ratio);
     }
 
-    private List<TouristSpot> createTouristSpots() {
-        List<TouristSpot> spots = new ArrayList<>();
-        spots.add(new TouristSpot("Yasaka Shrine", "Kyoto", "https://source.unsplash.com/Xq1ntWruZQI/600x800"));
-        spots.add(new TouristSpot("Fushimi Inari Shrine", "Kyoto", "https://source.unsplash.com/NYyCqdBOKwc/600x800"));
-        spots.add(new TouristSpot("Bamboo Forest", "Kyoto", "https://source.unsplash.com/buF62ewDLcQ/600x800"));
-        spots.add(new TouristSpot("Brooklyn Bridge", "New York", "https://source.unsplash.com/THozNzxEP3g/600x800"));
-        spots.add(new TouristSpot("Empire State Building", "New York", "https://source.unsplash.com/USrZRcRS2Lw/600x800"));
-        spots.add(new TouristSpot("The statue of Liberty", "New York", "https://source.unsplash.com/PeFk7fzxTdk/600x800"));
-        spots.add(new TouristSpot("Louvre Museum", "Paris", "https://source.unsplash.com/LrMWHKqilUw/600x800"));
-        spots.add(new TouristSpot("Eiffel Tower", "Paris", "https://source.unsplash.com/HN-5Z6AmxrM/600x800"));
-        spots.add(new TouristSpot("Big Ben", "London", "https://source.unsplash.com/CdVAUADdqEc/600x800"));
-        spots.add(new TouristSpot("Great Wall of China", "China", "https://source.unsplash.com/AWh9C-QjhE4/600x800"));
-        return spots;
+    @Override
+    public void onCardSwiped(Direction direction) {
+        Log.d("CardStackView", "onCardSwiped: p = " + manager.getTopPosition() + ", d = " + direction);
+        if (manager.getTopPosition() == adapter.getItemCount() - 5) {
+            paginate();
+        }
     }
 
-    private TouristSpotCardAdapter createTouristSpotCardAdapter() {
-        final TouristSpotCardAdapter adapter = new TouristSpotCardAdapter(getApplicationContext());
-        adapter.addAll(createTouristSpots());
-        return adapter;
+    @Override
+    public void onCardRewound() {
+        Log.d("CardStackView", "onCardRewound: " + manager.getTopPosition());
     }
 
-    private void setup() {
-        progressBar = (ProgressBar) findViewById(R.id.activity_main_progress_bar);
+    @Override
+    public void onCardCanceled() {
+        Log.d("CardStackView", "onCardCanceled:" + manager.getTopPosition());
+    }
 
-        cardStackView = (CardStackView) findViewById(R.id.activity_main_card_stack_view);
-        cardStackView.setCardEventListener(new CardStackView.CardEventListener() {
+    private void setupNavigation() {
+        // Toolbar
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+
+        // DrawerLayout
+        drawerLayout = findViewById(R.id.drawer_layout);
+        ActionBarDrawerToggle actionBarDrawerToggle = new ActionBarDrawerToggle(this, drawerLayout, toolbar, R.string.open_drawer, R.string.close_drawer);
+        actionBarDrawerToggle.syncState();
+        drawerLayout.addDrawerListener(actionBarDrawerToggle);
+
+        // NavigationView
+        NavigationView navigationView = findViewById(R.id.navigation_view);
+        navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
-            public void onCardDragging(float percentX, float percentY) {
-                Log.d("CardStackView", "onCardDragging");
-            }
-
-            @Override
-            public void onCardSwiped(SwipeDirection direction) {
-                Log.d("CardStackView", "onCardSwiped: " + direction.toString());
-                Log.d("CardStackView", "topIndex: " + cardStackView.getTopIndex());
-                if (cardStackView.getTopIndex() == adapter.getCount() - 5) {
-                    Log.d("CardStackView", "Paginate: " + cardStackView.getTopIndex());
-                    paginate();
+            public boolean onNavigationItemSelected(@NonNull MenuItem menuItem) {
+                switch (menuItem.getItemId()) {
+                    case R.id.reload:
+                        reload();
+                        break;
+                    case R.id.add_one_spot_at_first:
+                        addFirst(1);
+                        break;
+                    case R.id.add_two_spots_at_first:
+                        addFirst(2);
+                        break;
+                    case R.id.add_one_spot_at_last:
+                        addLast(1);
+                        break;
+                    case R.id.add_two_spots_at_last:
+                        addLast(2);
+                        break;
+                    case R.id.remove_one_spot_at_first:
+                        removeFirst(1);
+                        break;
+                    case R.id.remove_two_spots_at_first:
+                        removeFirst(2);
+                        break;
+                    case R.id.remove_one_spot_at_last:
+                        removeLast(1);
+                        break;
+                    case R.id.remove_two_spots_at_last:
+                        removeLast(2);
+                        break;
                 }
-            }
-
-            @Override
-            public void onCardReversed() {
-                Log.d("CardStackView", "onCardReversed");
-            }
-
-            @Override
-            public void onCardMovedToOrigin() {
-                Log.d("CardStackView", "onCardMovedToOrigin");
-            }
-
-            @Override
-            public void onCardClicked(int index) {
-                Log.d("CardStackView", "onCardClicked: " + index);
+                drawerLayout.closeDrawers();
+                return true;
             }
         });
     }
 
-    private void reload() {
-        cardStackView.setVisibility(View.GONE);
-        progressBar.setVisibility(View.VISIBLE);
-        new Handler().postDelayed(new Runnable() {
+    private void setupCardStackView() {
+        initialize();
+    }
+
+    private void setupButton() {
+        View skip = findViewById(R.id.skip_button);
+        skip.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void run() {
-                adapter = createTouristSpotCardAdapter();
-                cardStackView.setAdapter(adapter);
-                cardStackView.setVisibility(View.VISIBLE);
-                progressBar.setVisibility(View.GONE);
+            public void onClick(View v) {
+                SwipeAnimationSetting setting = new SwipeAnimationSetting.Builder()
+                        .setDirection(Direction.Left)
+                        .setDuration(200)
+                        .setInterpolator(new AccelerateInterpolator())
+                        .build();
+                manager.setSwipeAnimationSetting(setting);
+                cardStackView.swipe();
             }
-        }, 1000);
+        });
+
+        View rewind = findViewById(R.id.rewind_button);
+        rewind.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                RewindAnimationSetting setting = new RewindAnimationSetting.Builder()
+                        .setDirection(Direction.Bottom)
+                        .setDuration(200)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .build();
+                manager.setRewindAnimationSetting(setting);
+                cardStackView.rewind();
+            }
+        });
+
+        View like = findViewById(R.id.like_button);
+        like.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                SwipeAnimationSetting setting = new SwipeAnimationSetting.Builder()
+                        .setDirection(Direction.Right)
+                        .setDuration(200)
+                        .setInterpolator(new AccelerateInterpolator())
+                        .build();
+                manager.setSwipeAnimationSetting(setting);
+                cardStackView.swipe();
+            }
+        });
     }
 
-    private LinkedList<TouristSpot> extractRemainingTouristSpots() {
-        LinkedList<TouristSpot> spots = new LinkedList<>();
-        for (int i = cardStackView.getTopIndex(); i < adapter.getCount(); i++) {
-            spots.add(adapter.getItem(i));
-        }
-        return spots;
-    }
-
-    private void addFirst() {
-        LinkedList<TouristSpot> spots = extractRemainingTouristSpots();
-        spots.addFirst(createTouristSpot());
-        adapter.clear();
-        adapter.addAll(spots);
-        adapter.notifyDataSetChanged();
-    }
-
-    private void addLast() {
-        LinkedList<TouristSpot> spots = extractRemainingTouristSpots();
-        spots.addLast(createTouristSpot());
-        adapter.clear();
-        adapter.addAll(spots);
-        adapter.notifyDataSetChanged();
-    }
-
-    private void removeFirst() {
-        LinkedList<TouristSpot> spots = extractRemainingTouristSpots();
-        if (spots.isEmpty()) {
-            return;
-        }
-
-        spots.removeFirst();
-        adapter.clear();
-        adapter.addAll(spots);
-        adapter.notifyDataSetChanged();
-    }
-
-    private void removeLast() {
-        LinkedList<TouristSpot> spots = extractRemainingTouristSpots();
-        if (spots.isEmpty()) {
-            return;
-        }
-
-        spots.removeLast();
-        adapter.clear();
-        adapter.addAll(spots);
-        adapter.notifyDataSetChanged();
+    private void initialize() {
+        manager = new CardStackLayoutManager(getApplicationContext(), this);
+        manager.setStackFrom(StackFrom.None);
+        manager.setVisibleCount(3);
+        manager.setTranslationInterval(8.0f);
+        manager.setScaleInterval(0.95f);
+        manager.setSwipeThreshold(0.3f);
+        manager.setMaxDegree(20.0f);
+        manager.setDirections(Direction.HORIZONTAL);
+        manager.setCanScrollHorizontal(true);
+        manager.setCanScrollVertical(true);
+        adapter = new CardStackAdapter(this, createSpots());
+        cardStackView = findViewById(R.id.card_stack_view);
+        cardStackView.setLayoutManager(manager);
+        cardStackView.setAdapter(adapter);
     }
 
     private void paginate() {
-        cardStackView.setPaginationReserved();
-        adapter.addAll(createTouristSpots());
-        adapter.notifyDataSetChanged();
+        List<Spot> oldList = adapter.getSpots();
+        List<Spot> newList = new ArrayList<Spot>() {{
+            addAll(adapter.getSpots());
+            addAll(createSpots());
+        }};
+        SpotDiffCallback callback = new SpotDiffCallback(oldList, newList);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+        adapter.setSpots(newList);
+        result.dispatchUpdatesTo(adapter);
     }
 
-    public void swipeLeft() {
-        List<TouristSpot> spots = extractRemainingTouristSpots();
-        if (spots.isEmpty()) {
+    private void reload() {
+        List<Spot> oldList = adapter.getSpots();
+        List<Spot> newList = createSpots();
+        SpotDiffCallback callback = new SpotDiffCallback(oldList, newList);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+        adapter.setSpots(newList);
+        result.dispatchUpdatesTo(adapter);
+    }
+
+    private void addFirst(final int size) {
+        List<Spot> oldList = adapter.getSpots();
+        List<Spot> newList = new ArrayList<Spot>() {{
+            addAll(adapter.getSpots());
+            for (int i = 0; i < size; i++) {
+                add(manager.getTopPosition(), createSpot());
+            }
+        }};
+        SpotDiffCallback callback = new SpotDiffCallback(oldList, newList);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+        adapter.setSpots(newList);
+        result.dispatchUpdatesTo(adapter);
+    }
+
+    private void addLast(final int size) {
+        List<Spot> oldList = adapter.getSpots();
+        List<Spot> newList = new ArrayList<Spot>() {{
+            addAll(adapter.getSpots());
+            for (int i = 0; i < size; i++) {
+                add(createSpot());
+            }
+        }};
+        SpotDiffCallback callback = new SpotDiffCallback(oldList, newList);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+        adapter.setSpots(newList);
+        result.dispatchUpdatesTo(adapter);
+    }
+
+    private void removeFirst(final int size) {
+        if (adapter.getSpots().isEmpty()) {
             return;
         }
 
-        View target = cardStackView.getTopView();
-        View targetOverlay = cardStackView.getTopView().getOverlayContainer();
-
-        ValueAnimator rotation = ObjectAnimator.ofPropertyValuesHolder(
-                target, PropertyValuesHolder.ofFloat("rotation", -10f));
-        rotation.setDuration(200);
-        ValueAnimator translateX = ObjectAnimator.ofPropertyValuesHolder(
-                target, PropertyValuesHolder.ofFloat("translationX", 0f, -2000f));
-        ValueAnimator translateY = ObjectAnimator.ofPropertyValuesHolder(
-                target, PropertyValuesHolder.ofFloat("translationY", 0f, 500f));
-        translateX.setStartDelay(100);
-        translateY.setStartDelay(100);
-        translateX.setDuration(500);
-        translateY.setDuration(500);
-        AnimatorSet cardAnimationSet = new AnimatorSet();
-        cardAnimationSet.playTogether(rotation, translateX, translateY);
-
-        ObjectAnimator overlayAnimator = ObjectAnimator.ofFloat(targetOverlay, "alpha", 0f, 1f);
-        overlayAnimator.setDuration(200);
-        AnimatorSet overlayAnimationSet = new AnimatorSet();
-        overlayAnimationSet.playTogether(overlayAnimator);
-
-        cardStackView.swipe(SwipeDirection.Left, cardAnimationSet, overlayAnimationSet);
+        List<Spot> oldList = adapter.getSpots();
+        List<Spot> newList = new ArrayList<Spot>() {{
+            addAll(adapter.getSpots());
+            for (int i = 0; i < size; i++) {
+                remove(manager.getTopPosition());
+            }
+        }};
+        SpotDiffCallback callback = new SpotDiffCallback(oldList, newList);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+        adapter.setSpots(newList);
+        result.dispatchUpdatesTo(adapter);
     }
 
-    public void swipeRight() {
-        List<TouristSpot> spots = extractRemainingTouristSpots();
-        if (spots.isEmpty()) {
+    private void removeLast(final int size) {
+        if (adapter.getSpots().isEmpty()) {
             return;
         }
 
-        View target = cardStackView.getTopView();
-        View targetOverlay = cardStackView.getTopView().getOverlayContainer();
-
-        ValueAnimator rotation = ObjectAnimator.ofPropertyValuesHolder(
-                target, PropertyValuesHolder.ofFloat("rotation", 10f));
-        rotation.setDuration(200);
-        ValueAnimator translateX = ObjectAnimator.ofPropertyValuesHolder(
-                target, PropertyValuesHolder.ofFloat("translationX", 0f, 2000f));
-        ValueAnimator translateY = ObjectAnimator.ofPropertyValuesHolder(
-                target, PropertyValuesHolder.ofFloat("translationY", 0f, 500f));
-        translateX.setStartDelay(100);
-        translateY.setStartDelay(100);
-        translateX.setDuration(500);
-        translateY.setDuration(500);
-        AnimatorSet cardAnimationSet = new AnimatorSet();
-        cardAnimationSet.playTogether(rotation, translateX, translateY);
-
-        ObjectAnimator overlayAnimator = ObjectAnimator.ofFloat(targetOverlay, "alpha", 0f, 1f);
-        overlayAnimator.setDuration(200);
-        AnimatorSet overlayAnimationSet = new AnimatorSet();
-        overlayAnimationSet.playTogether(overlayAnimator);
-
-        cardStackView.swipe(SwipeDirection.Right, cardAnimationSet, overlayAnimationSet);
+        List<Spot> oldList = adapter.getSpots();
+        List<Spot> newList = new ArrayList<Spot>() {{
+            addAll(adapter.getSpots());
+            for (int i = 0; i < size; i++) {
+                remove(size() - 1);
+            }
+        }};
+        SpotDiffCallback callback = new SpotDiffCallback(oldList, newList);
+        DiffUtil.DiffResult result = DiffUtil.calculateDiff(callback);
+        adapter.setSpots(newList);
+        result.dispatchUpdatesTo(adapter);
     }
 
-    private void reverse() {
-        cardStackView.reverse();
+    private Spot createSpot() {
+        return new Spot("Yasaka Shrine", "Kyoto", "https://source.unsplash.com/Xq1ntWruZQI/600x800");
+    }
+
+    private List<Spot> createSpots() {
+        List<Spot> spots = new ArrayList<>();
+        spots.add(new Spot("Yasaka Shrine", "Kyoto", "https://source.unsplash.com/Xq1ntWruZQI/600x800"));
+        spots.add(new Spot("Fushimi Inari Shrine", "Kyoto", "https://source.unsplash.com/NYyCqdBOKwc/600x800"));
+        spots.add(new Spot("Bamboo Forest", "Kyoto", "https://source.unsplash.com/buF62ewDLcQ/600x800"));
+        spots.add(new Spot("Brooklyn Bridge", "New York", "https://source.unsplash.com/THozNzxEP3g/600x800"));
+        spots.add(new Spot("Empire State Building", "New York", "https://source.unsplash.com/USrZRcRS2Lw/600x800"));
+        spots.add(new Spot("The statue of Liberty", "New York", "https://source.unsplash.com/PeFk7fzxTdk/600x800"));
+        spots.add(new Spot("Louvre Museum", "Paris", "https://source.unsplash.com/LrMWHKqilUw/600x800"));
+        spots.add(new Spot("Eiffel Tower", "Paris", "https://source.unsplash.com/HN-5Z6AmxrM/600x800"));
+        spots.add(new Spot("Big Ben", "London", "https://source.unsplash.com/CdVAUADdqEc/600x800"));
+        spots.add(new Spot("Great Wall of China", "China", "https://source.unsplash.com/AWh9C-QjhE4/600x800"));
+        return spots;
     }
 
 }
